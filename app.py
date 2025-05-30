@@ -1,11 +1,14 @@
 import click
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-from models import Account, Category, Transaction, User
+from lib.models import Base, Account, Category, Transaction, User
 from datetime import datetime
 
 engine = create_engine("sqlite:///pocket_money_tracker.db")
 session = Session(bind=engine)
+
+# Create tables if they don't exist
+Base.metadata.create_all(engine)
 
 def validate_date(date_str):
     try:
@@ -25,9 +28,15 @@ def cli():
     pass
 
 @cli.command()
+def init_db():
+    """Initialize the database by creating all tables."""
+    Base.metadata.create_all(engine)
+    click.echo("Database initialized with all tables.")
+
+@cli.command()
 @click.argument("username")
 def add_user(username):
-    click.echo(f"Debug: Received username = {username}")  # Debug print
+    click.echo(f"Debug: Received username = {username}")
     if username is None:
         raise click.BadParameter("Username cannot be None")
     user = User(username=username)
@@ -95,21 +104,6 @@ def list_transactions(account_id):
     for t in transactions:
         category_names = [c.name for c in t.categories]
         click.echo(f"ID: {t.id}, Amount: {t.amount}, Date: {t.date}, Description: {t.description}, Categories: {', '.join(category_names)}")
-
-@cli.command()
-@click.argument("username")
-def add_user(username):
-    click.echo(f"Debug: Received username = {username}")
-    if username is None:
-        raise click.BadParameter("Username cannot be None")
-    click.echo("Debug: Creating User object")
-    user = User(username=username)
-    click.echo(f"Debug: User object created: {user}")
-    click.echo("Debug: Adding user to session")
-    session.add(user)
-    click.echo("Debug: Committing session")
-    session.commit()
-    click.echo(f"Added user: {username} (ID: {user.id})")
 
 if __name__ == "__main__":
     try:
